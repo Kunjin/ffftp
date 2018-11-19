@@ -1334,14 +1334,6 @@ typedef struct termcodeconvinfo {
 } TERMCODECONVINFO;
 
 
-/*===== テンポラリファイルリスト =====*/
-
-typedef struct tempfilelist {
-	char *Fname;				/* ファイル名 */
-	struct tempfilelist *Next;
-} TEMPFILELIST;
-
-
 /*===== サウンドファイル =====*/
 
 typedef struct {

@@ -89,8 +89,6 @@ int SepaWidth;
 int RemoteWidth;
 int ListHeight;
 
-static TEMPFILELIST *TempFiles = NULL;
-
 static int SaveExit = YES;
 static int AutoExit = NO;
 
@@ -2926,66 +2924,22 @@ void ExecViewer2(char *Fname1, char *Fname2, int App)
 }
 
 
-/*----- テンポラリファイル名をテンポラリファイルリストに追加 ------------------
-*
-*	Parameter
-*		char *Fname : テンポラリファイル名
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
+static std::vector<fs::path> TempFiles;
 
-void AddTempFileList(char *Fname)
-{
-	TEMPFILELIST *New;
-
-	if((New = (TEMPFILELIST*)malloc(sizeof(TEMPFILELIST))) != NULL)
-	{
-		if((New->Fname = (char*)malloc(strlen(Fname)+1)) != NULL)
-		{
-			strcpy(New->Fname, Fname);
-			if(TempFiles == NULL)
-				New->Next = NULL;
-			else
-				New->Next = TempFiles;
-			TempFiles = New;
-		}
-		else
-			free(New);
-	}
-	return;
+// テンポラリファイル名をテンポラリファイルリストに追加
+void AddTempFileList(char *Fname) {
+	TempFiles.push_back(fs::u8path(Fname));
 }
 
 
-/*----- テンポラリファイルリストに登録されているファイルを全て削除 ------------
-*
-*	Parameter
-*		なし
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-static void DeleteAlltempFile(void)
-{
-	TEMPFILELIST *Pos;
-	TEMPFILELIST *Next;
-
-	Pos = TempFiles;
-	while(Pos != NULL)
-	{
-		fs::remove(fs::u8path(Pos->Fname));
-
-		Next = Pos->Next;
-		free(Pos->Fname);
-		free(Pos);
-		Pos = Next;
-	}
+// テンポラリファイルリストに登録されているファイルを全て削除
+static void DeleteAlltempFile() {
+	for (auto const& path : TempFiles)
+		fs::remove(path);
+	TempFiles.clear();
 
 	// OLE D&Dのテンポラリを削除する (2007.9.11 yutaka)
 	doDeleteRemoteFile();
-
-	return;
 }
 
 
