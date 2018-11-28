@@ -3196,22 +3196,12 @@ int AskPortableVersion(void)
 	return(PortableVersion);
 }
 
-// 全設定暗号化対応
-int Restart()
-{
-	int Sts;
-	char* CommandLine;
-	STARTUPINFO si;
-	Sts = FFFTP_FAIL;
-	if(CommandLine = (char*)malloc(sizeof(char) * (strlen(GetCommandLine())  + 1)))
-	{
-		strcpy(CommandLine, GetCommandLine());
-		GetStartupInfo(&si);
-		if(ProcessInformation pi; CreateProcess(NULL, CommandLine, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi))
-			Sts = FFFTP_SUCCESS;
-		free(CommandLine);
-	}
-	return Sts;
+void Restart() {
+	std::wstring commandLine(GetCommandLineW());
+	STARTUPINFOW si;
+	GetStartupInfoW(&si);
+	ProcessInformation pi;
+	CreateProcessW(nullptr, data(commandLine), nullptr, nullptr, false, 0, nullptr, nullptr, &si, &pi);
 }
 
 void Terminate()

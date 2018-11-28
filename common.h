@@ -1404,8 +1404,7 @@ BOOL IsMainThread();
 // ポータブル版判定
 void CheckPortableVersion();
 int AskPortableVersion(void);
-// 全設定暗号化対応
-int Restart();
+void Restart();
 void Terminate();
 // タスクバー進捗表示
 int LoadTaskbarList3();
