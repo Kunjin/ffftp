@@ -2444,7 +2444,7 @@ void DoubleClickProc(int Win, int Mode, int App)
 
 							EnableUserOpe();
 
-							AddTempFileList(Remote);
+							AddTempFileList(fs::u8path(Remote));
 							if(Sts/100 == FTP_COMPLETE) {
 								if (UseDiffViewer == YES) {
 									AskLocalCurDir(Local, FMAX_PATH);
@@ -2927,8 +2927,8 @@ void ExecViewer2(char *Fname1, char *Fname2, int App)
 static std::vector<fs::path> TempFiles;
 
 // テンポラリファイル名をテンポラリファイルリストに追加
-void AddTempFileList(char *Fname) {
-	TempFiles.push_back(fs::u8path(Fname));
+void AddTempFileList(fs::path const& path) {
+	TempFiles.push_back(path);
 }
 
 

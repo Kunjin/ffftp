@@ -27,6 +27,7 @@
 /============================================================================*/
 
 #pragma once
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
 #define _CRT_SECURE_NO_WARNINGS
 #define _SCL_SECURE_NO_WARNINGS
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
@@ -36,7 +37,9 @@
 #include <array>
 #include <charconv>
 #include <chrono>
+#include <codecvt>
 #include <filesystem>
+#include <fstream>
 #include <future>
 #include <iterator>
 #include <map>
@@ -1390,7 +1393,7 @@ HINSTANCE GetFtpInst(void);
 void DoubleClickProc(int Win, int Mode, int App);
 void ExecViewer(char *Fname, int App);
 void ExecViewer2(char *Fname1, char *Fname2, int App);
-void AddTempFileList(char *Fname);
+void AddTempFileList(fs::path const& path);
 void SoundPlay(int Num);
 char *AskHelpFilePath(void);
 char *AskTmpFilePath(void);
@@ -1541,7 +1544,6 @@ void _SetTaskMsg(const char* format, ...);
 #else
 #define SetTaskMsg(...) _SetTaskMsg(__VA_ARGS__)
 #endif
-int SaveTaskMsg(char *Fname);
 void DispTaskMsg(void);
 void _DoPrintf(const char* format, ...);
 #ifdef _DEBUG

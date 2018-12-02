@@ -173,67 +173,16 @@ void _SetTaskMsg(const char* format, ...) {
 }
 
 
-/*----- タスクメッセージをファイルに保存する ----------------------------------
-*
-*	Parameter
-*		char *Fname : ファイル名
-*
-*	Return Value
-*		int ステータス
-*			FFFTP_SUCCESS/FFFTP_FAIL
-*----------------------------------------------------------------------------*/
-
-int SaveTaskMsg(char *Fname)
-{
-	FILE *Strm;
-	int Size;
-	char *Buf;
-	int Sts;
-
-
-	Sts = FFFTP_FAIL;
-	Size = (int)SendMessage(GetTaskWnd(), WM_GETTEXTLENGTH, 0, 0);
-	if((Buf = (char*)malloc(Size)) != NULL)
-	{
-		if((Strm = fopen(Fname, "wb")) != NULL)
-		{
-			SendMessage(GetTaskWnd(), WM_GETTEXT, Size, (LPARAM)Buf);
-			if(fwrite(Buf, strlen(Buf), 1, Strm) == 1)
-				Sts = FFFTP_SUCCESS;
-			fclose(Strm);
-
-			if(Sts == FFFTP_FAIL)
-				fs::remove(fs::u8path(Fname));
-		}
-		free(Buf);
-	}
-	return(Sts);
-}
-
-
-/*----- タスク内容をビューワで表示 --------------------------------------------
-*
-*	Parameter
-*		なし
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-void DispTaskMsg(void)
-{
-	char Buf[FMAX_PATH+1];
-
-	strcpy(Buf, AskTmpFilePath());
-	SetYenTail(Buf);
-	strcat(Buf, "_ffftp.tsk");
-
-	if(SaveTaskMsg(Buf) == FFFTP_SUCCESS)
-	{
-		AddTempFileList(Buf);
-		ExecViewer(Buf, 0);
-	}
-	return;
+// タスク内容をビューワで表示
+void DispTaskMsg() {
+	auto const path = fs::u8path(AskTmpFilePath()) / L"_ffftp.tsk";
+	if (std::wofstream of{ path, std::ios_base::binary }) {
+		of.imbue({ {}, new std::codecvt_utf8<wchar_t, 0x10FFFF, std::generate_header> });
+		of << GetText(GetTaskWnd());
+	} else
+		return;
+	AddTempFileList(path);
+	ExecViewer(const_cast<char*>(path.u8string().c_str()), 0);
 }
 
 
