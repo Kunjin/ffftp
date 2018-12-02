@@ -29,23 +29,12 @@
 
 #include "common.h"
 
-
-/*===== プロトタイプ =====*/
-
 static void CopyHostToHistory(HOSTDATA *Host, HISTORYDATA *New);
-static void AddOneFnameToMenu(char *Host, char *User, char *Remote, int Num);
-static void RemoveAllHistoryFromMenu(void);
 
-/*===== 外部参照 =====*/
-
-/* 設定値 */
 extern int FileHist;
 extern int PassToHist;
 
-/*===== ローカルなワーク =====*/
-
-static HISTORYDATA *HistoryBase = NULL;
-static int HistoryNum = 0;
+static std::list<HISTORYDATA> HistoryBase;
 
 /* ヒストリのメニュー項目のID */
 static int MenuHistId[HISTORY_MAX] = {
@@ -54,7 +43,6 @@ static int MenuHistId[HISTORY_MAX] = {
 	MENU_HIST_11, MENU_HIST_12, MENU_HIST_13, MENU_HIST_14, MENU_HIST_15,
 	MENU_HIST_16, MENU_HIST_17, MENU_HIST_18, MENU_HIST_19, MENU_HIST_20
 };
-
 
 
 /*----- ホスト情報をヒストリリストの先頭に追加する ----------------------------
@@ -78,92 +66,24 @@ void AddHostToHistory(HOSTDATA *Host, int TrMode)
 }
 
 
-/*----- ヒストリをヒストリリストの先頭に追加する ------------------------------
-*
-*	Parameter
-*		HISTORYDATA *Hist : ヒストリデータ
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-void AddHistoryToHistory(HISTORYDATA *Hist)
-{
-	HISTORYDATA *New;
-
+// ヒストリをヒストリリストの先頭に追加する
+void AddHistoryToHistory(HISTORYDATA *Hist) {
 	CheckHistoryNum(1);
-	if(FileHist > HistoryNum)
-	{
-		New = (HISTORYDATA*)malloc(sizeof(HISTORYDATA));
-		if(New != NULL)
-		{
-			memcpy(New, Hist, sizeof(HISTORYDATA));
-			New->Next = HistoryBase;
-			HistoryBase = New;
-			HistoryNum++;
-		}
-	}
-	return;
+	if (FileHist > size_as<int>(HistoryBase))
+		HistoryBase.push_front(*Hist);
 }
 
 
-/*----- ヒストリの数を返す ----------------------------------------------------
-*
-*	Parameter
-*		なし
-*
-*	Return Value
-*		int ヒストリの数
-*----------------------------------------------------------------------------*/
-
-int AskHistoryNum(void)
-{
-	return(HistoryNum);
+// ヒストリの数を返す
+int AskHistoryNum() {
+	return size_as<int>(HistoryBase);
 }
 
 
-/*----- ヒストリの数をチェックし多すぎたら削除 --------------------------------
-*
-*	Parameter
-*		int Space : 空けておく個数 (0～)
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-void CheckHistoryNum(int Space)
-{
-	int i;
-	HISTORYDATA *Prev;
-	HISTORYDATA *Pos;
-	HISTORYDATA *Next;
-
-	if(HistoryNum > FileHist-Space)
-	{
-		/* 残すべきヒストリを探す */
-		Pos = HistoryBase;
-		Prev = NULL;
-		for(i = 0; i < FileHist-Space; i++)
-		{
-			Prev = Pos;
-			Pos = Pos->Next;
-		}
-
-		/* いらないヒストリを消す */
-		if(Prev == NULL)
-			HistoryBase = NULL;
-		else
-			Prev->Next = NULL;
-
-		while(Pos != NULL)
-		{
-			Next = Pos->Next;
-			free(Pos);
-			Pos = Next;
-			HistoryNum--;
-		}
-	}
-	return;
+// ヒストリの数をチェックし多すぎたら削除
+void CheckHistoryNum(int Space) {
+	if (size_as<int>(HistoryBase) > FileHist - Space)
+		HistoryBase.resize(FileHist - Space);
 }
 
 
@@ -324,121 +244,37 @@ void CopyDefaultHistory(HISTORYDATA *Set)
 }
 
 
-/*----- 全ヒストリをメニューにセット ------------------------------------------
-*
-*	Parameter
-*		なし
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-void SetAllHistoryToMenu(void)
-{
-	int i;
-	HISTORYDATA *Pos;
-
-	RemoveAllHistoryFromMenu();
-
-	Pos = HistoryBase;
-	for(i = 0; i < HistoryNum; i++)
-	{
-		AddOneFnameToMenu(Pos->HostAdrs, Pos->UserName, Pos->RemoteInitDir, i);
-		Pos = Pos->Next;
+// 全ヒストリをメニューにセット
+void SetAllHistoryToMenu() {
+	auto menu = GetSubMenu(GetMenu(GetMainHwnd()), 0);
+	for (int i = DEF_FMENU_ITEMS, count = GetMenuItemCount(menu); i < count; i++)
+		DeleteMenu(menu, DEF_FMENU_ITEMS, MF_BYPOSITION);
+	if (empty(HistoryBase))
+		return;
+	AppendMenuW(menu, MF_SEPARATOR, 0, nullptr);
+	int i = 0;
+	for (auto const& h : HistoryBase) {
+		char buffer[HOST_ADRS_LEN + USER_NAME_LEN + INIT_DIR_LEN + 7 + 1];
+		if (i < 9)
+			sprintf(buffer, "&%d %s (%s) %s", i + 1, h.HostAdrs, h.UserName, h.RemoteInitDir);
+		else if (i == 9)
+			sprintf(buffer, "&0 %s (%s) %s", h.HostAdrs, h.UserName, h.RemoteInitDir);
+		else
+			sprintf(buffer, "&* %s (%s) %s", h.HostAdrs, h.UserName, h.RemoteInitDir);
+		AppendMenu(menu, MF_STRING, MenuHistId[i++], buffer);
 	}
-	return;
 }
 
 
-/*----- ヒストリをメニューに追加 ----------------------------------------------
-*
-*	Parameter
-*		char *Host : ホスト名
-*		char *User : ユーザ名
-*		char *Remote : ホストのフォルダ
-*		int Num : 番号
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-static void AddOneFnameToMenu(char *Host, char *User, char *Remote, int Num)
-{
-	HMENU hMenu;
-	char Tmp[HOST_ADRS_LEN+USER_NAME_LEN+INIT_DIR_LEN+7+1];
-
-	hMenu = GetSubMenu(GetMenu(GetMainHwnd()), 0);
-
-	if(Num == 0)
-		AppendMenu(hMenu, MF_SEPARATOR, 0, NULL);
-
-	if(Num < 9)
-		sprintf(Tmp, "&%d %s (%s) %s", Num+1, Host, User, Remote);
-	else if(Num == 9)
-		sprintf(Tmp, "&0 %s (%s) %s", Host, User, Remote);
-	else
-		sprintf(Tmp, "&* %s (%s) %s", Host, User, Remote);
-
-	AppendMenu(hMenu, MF_STRING, MenuHistId[Num], Tmp);
-
-	return;
-}
-
-
-/*----- 全ヒストリをメニューから削除 ------------------------------------------
-*
-*	Parameter
-*		なし
-*
-*	Return Value
-*		なし
-*----------------------------------------------------------------------------*/
-
-static void RemoveAllHistoryFromMenu(void)
-{
-	HMENU hMenu;
-	int Cnt;
-	int i;
-
-	hMenu = GetSubMenu(GetMenu(GetMainHwnd()), 0);
-	Cnt = GetMenuItemCount(hMenu);
-	for(i = DEF_FMENU_ITEMS; i < Cnt; i++)
-	{
-		DeleteMenu(hMenu, DEF_FMENU_ITEMS, MF_BYPOSITION);
-	}
-	return;
-}
-
-
-/*----- 指定メニューコマンドに対応するヒストリを返す --------------------------
-*
-*	Parameter
-*		int MenuCmd : 取り出すヒストリに割り当てられたメニューコマンド (MENU_xxx)
-*		HISTORYDATA *Buf : ヒストリデータを返すバッファ
-*
-*	Return Value
-*		int ステータス
-*			FFFTP_SUCCESS/FFFTP_FAIL
-*----------------------------------------------------------------------------*/
-
-int GetHistoryByCmd(int MenuCmd, HISTORYDATA *Buf)
-{
-	int Sts;
-	int i;
-	HISTORYDATA *Pos;
-
-	Sts = FFFTP_FAIL;
-	Pos = HistoryBase;
-	for(i = 0; i < HistoryNum; i++)
-	{
-		if(MenuHistId[i] == MenuCmd)
-		{
-			memcpy(Buf, Pos, sizeof(HISTORYDATA));
-			Sts = FFFTP_SUCCESS;
+// 指定メニューコマンドに対応するヒストリを返す
+int GetHistoryByCmd(int MenuCmd, HISTORYDATA *Buf) {
+	int i = 0;
+	for (auto const& h : HistoryBase)
+		if (MenuHistId[i++] == MenuCmd) {
+			*Buf = h;
+			return FFFTP_SUCCESS;
 		}
-		Pos = Pos->Next;
-	}
-	return(Sts);
+	return FFFTP_FAIL;
 }
 
 

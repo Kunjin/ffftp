@@ -1236,7 +1236,6 @@ typedef struct historydata {
 	int TransferErrorReconnect;			/* 転送エラー時に再接続する (YES/NO) */
 	// ホスト側の設定ミス対策
 	int NoPasvAdrs;						/* PASVで返されるアドレスを無視する (YES/NO) */
-	struct historydata *Next;
 } HISTORYDATA;
 
 
